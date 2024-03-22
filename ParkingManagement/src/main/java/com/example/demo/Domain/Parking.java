@@ -1,50 +1,49 @@
 package com.example.demo.Domain;
-
-import java.util.UUID;
-
-import org.springframework.data.mongodb.core.mapping.Document;
-
-import com.fasterxml.jackson.annotation.JsonIgnore;
-
 import jakarta.persistence.CascadeType;
+import jakarta.persistence.Entity;
+import jakarta.persistence.EnumType;
+import jakarta.persistence.Enumerated;
 import jakarta.persistence.GeneratedValue;
 import jakarta.persistence.GenerationType;
-import org.springframework.data.annotation.Id;
+import jakarta.persistence.Id;
 import jakarta.persistence.OneToMany;
 import jakarta.persistence.OneToOne;
+import jakarta.persistence.Table;
 
 import java.util.ArrayList;
 import java.util.List; // Import correct pour la classe List
 
-@Document(collection = "parkings")
+@Entity
+@Table(name = "parkings")
 public class Parking {
     
-   @Id
-   // @GeneratedValue(strategy = GenerationType.AUTO)
-    private String id;
+    @Id
+    @GeneratedValue(strategy = GenerationType.IDENTITY)
+    private Long id;
     
     private String name;
     private String description;
     private Integer capacity;
     
+    @Enumerated(EnumType.STRING)
     private ParkingType parkingType;
 
     
-    //@OneToMany(mappedBy = "parking", cascade = CascadeType.ALL)
-   // @JsonIgnore
-    private List<String> blocksNames;
+    @OneToMany(mappedBy = "parking", cascade = CascadeType.ALL)
+    private List<Block> blocks;
     
     @OneToOne(mappedBy = "parking")
     private GeoPoint coordinate;
+    @OneToOne(mappedBy = "parking")
     private Address parkingAddress;
 
 
-    public String getParkingId() {
+    public Long getParkingId() {
         return id;
     }
 
 
-    public void setParkingId(String parkingId) {
+    public void setParkingId(Long parkingId) {
         this.id = parkingId;
     }
     public String getName() {
@@ -59,20 +58,16 @@ public class Parking {
     public void setDescription(String description) {
         this.description = description;
     }
+
+
     public Integer getCapacity() {
-        // Ensure that the list of blocks is not null
-      //  if (blocks != null) {
-            // Use stream() to iterate over the list and mapToInt() to extract capacities
-            // Then, use sum() to get the total sum
-        //    int capacity = 0;
-        /*   for (Block block : blocks) {
-                capacity += block.getCapacity();
+        int totalCapacity = 0;
+        if (blocks != null) {
+            for (Block block : blocks) {
+                totalCapacity += block.getCapacity();
             }
-            return capacity;
-        } else {
-            return 0; // Return 0 if the list of blocks is null
-        }*/  
-        return capacity;
+        }
+        return totalCapacity;
     }
     
     public void setCapacity(Integer capacity) {
@@ -81,14 +76,17 @@ public class Parking {
     public ParkingType getParkingType() {
         return parkingType;
     }
+
+
+
     public void setParkingType(ParkingType parkingType) {
         this.parkingType = parkingType;
     }
-    public List<String> getBlocksNames() {
-        return blocksNames;
+    public List<Block> getBlocks() {
+        return blocks;
     }
-    public void setBlocksNames(List<String> blocks) {
-        this.blocksNames = blocks;
+    public void setBlocks(List<Block> blocks) {
+        this.blocks = blocks;
     }
     public GeoPoint getCoordinate() {
         return coordinate;
@@ -113,15 +111,15 @@ public class Parking {
     }
 
 
-    public Parking(String parkingId, String name, String description, Integer capacity, ParkingType parkingType,
-    List<String> blocksNames, GeoPoint coordinate, Address parkingAddress) {
+    public Parking(Long parkingId, String name, String description, Integer capacity, ParkingType parkingType,
+    List<Block> blocksNames, GeoPoint coordinate, Address parkingAddress) {
 this.id = parkingId;
 this.name = name;
 this.description = description;
 this.capacity = 0;
 this.parkingType = parkingType;
-this.blocksNames = new ArrayList<>();
-this.blocksNames.add("DefultBlock");
+this.blocks = new ArrayList<>();
+this.blocks.add(new Block());
 this.coordinate = coordinate;
 this.parkingAddress = parkingAddress;
 }
@@ -130,8 +128,8 @@ this.parkingAddress = parkingAddress;
     public Parking() {
        
         this.capacity = 0;
-        this.blocksNames = new ArrayList<>();
-        this.blocksNames.add("defaultBlock");
+        this.blocks = new ArrayList<>();
+        this.blocks.add(new Block());
     }
 
     

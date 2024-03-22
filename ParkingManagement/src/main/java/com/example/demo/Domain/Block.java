@@ -1,34 +1,37 @@
 package com.example.demo.Domain;
 
 import java.util.List;
-import java.util.UUID;
 
-import org.springframework.data.mongodb.core.mapping.Document;
 
 import com.fasterxml.jackson.annotation.JsonIgnore;
 
+import jakarta.persistence.CascadeType;
+import jakarta.persistence.Embeddable;
+import jakarta.persistence.Entity;
+import jakarta.persistence.EnumType;
+import jakarta.persistence.Enumerated;
 import jakarta.persistence.GeneratedValue;
 import jakarta.persistence.GenerationType;
-import org.springframework.data.annotation.Id;
+import jakarta.persistence.Id;
 import jakarta.persistence.JoinColumn;
 import jakarta.persistence.ManyToOne;
 import jakarta.persistence.OneToMany;
+import jakarta.persistence.Table;
 
-@Document(collection = "blocks")
+@Entity
+@Table(name = "Blocks")
 public class Block {
      
     @Id
-   // @GeneratedValue(strategy = GenerationType.AUTO)
-    private String id;
+    @GeneratedValue(strategy = GenerationType.IDENTITY)
+    private Long id;
+
     private Boolean IsOppen;
    
+
     public Boolean getIsOppen() {
         return IsOppen;
     }
-
-
-
-
 
     public void setIsOppen(Boolean isOppen) {
         IsOppen = isOppen;
@@ -38,7 +41,7 @@ public class Block {
 
 
 
-    public String getBlockId() {
+    public Long getBlockId() {
         return id;
     }
     
@@ -46,15 +49,15 @@ public class Block {
   
 
 
-	public Block(String blockId, Integer capacity, String blockName, BlockType blockType, List<String> places,
-    String parkingName) {
+	public Block(Long blockId, Integer capacity, String blockName, BlockType blockType, List<Places> places,
+    Parking parking) {
 		super();
 		this.id = blockId;
 		this.capacity = capacity;
 		this.blockName = blockName;
 		this.blockType = blockType;
-		this.placesnames = places;
-		this.parkingName = parkingName;
+		this.places = places;
+		this.parking = parking;
 	}
 
 
@@ -65,9 +68,10 @@ public class Block {
 
 
 
-	public void setBlockId(String blockId) {
+	public void setBlockId(Long blockId) {
         this.id = blockId;
     }
+
     public Integer getCapacity() {
         return capacity != null ? capacity.intValue() : 0;
     }
@@ -86,31 +90,35 @@ public class Block {
     public void setBlockType(BlockType blockType) {
         this.blockType = blockType;
     }
-    public List<String> getPlaces() {
-        return placesnames;
+    public List<Places> getPlaces() {
+        return places;
     }
-    public void setPlaces(List<String> places) {
-        this.placesnames = places;
+    public void setPlaces(List<Places> places) {
+        this.places = places;
     }
-    public String getParkingName() {
-        return parkingName;
+    public Parking getParking() {
+        return parking;
     }
-    public void setParkingname(String parkingName) {
-        this.parkingName = parkingName;
+    public void setParking(Parking parking) {
+        this.parking = parking;
     }
     private Integer capacity;
     private String blockName;
    
-
+    @Enumerated(EnumType.STRING)
     private BlockType blockType;
-    @OneToMany(mappedBy = "block")
-    private List<String> placesnames;
-    
-    //@ManyToOne
-    //@JoinColumn(name = "parkingId")
-    //@JsonIgnore
 
-    private String parkingName;
+
+    @OneToMany(mappedBy = "block")
+    private List<Places> places;
+    
+    // @ManyToOne
+     //@JoinColumn(name = "parking_id")
+     //@JsonIgnore
+     @ManyToOne
+    private Parking parking;
+
+
     public String getIdentifiant() {
         return identifiant;
     }

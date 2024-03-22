@@ -28,6 +28,8 @@ public interface ServiceParking {
  Void UpdateBlock(String BlockName, String ParkingName); // capacity, type, 
  void FermerBlock(String BlockName, String ParkingName);
  void OuvrirBlock(String BlockName, String ParkingName);
+
+
  Boolean UpdatePlaceStateToAvailable(String PlaceName, String Blockname, String ParkingName);
 
 

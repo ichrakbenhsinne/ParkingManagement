@@ -1,5 +1,7 @@
 package com.example.demo.Application;
 
+import java.io.PrintWriter;
+import java.io.StringWriter;
 import java.util.ArrayList;
 import java.util.List;
 import java.util.UUID;
@@ -18,7 +20,7 @@ import com.example.demo.Domain.Parking;
 import com.example.demo.Domain.ParkingRepository;
 import com.example.demo.Domain.ParkingType;
 import com.example.demo.Domain.Places;
-import com.example.demo.Domain.placeRepository;
+import com.example.demo.Domain.placesRepository;
 import com.example.demo.Exceptions.ObjectNotFoundException;
 
 import io.micrometer.common.util.StringUtils;
@@ -31,48 +33,52 @@ public class ServiceParkingImpl implements ServiceParking {
     @Autowired  
     BlockRepository blockrepository;
     @Autowired 
-    placeRepository placerepository;
+    placesRepository placerepository;
     @Autowired 
     GeopointRepository geopointrepository;
     @Autowired
     AddressRepository addressrepository;
  
     @Override
-    public Parking addParking(String name, String description, ParkingType parkingType,
-                               double langitudeGeoPoint, double latitudeGeoPoint,
-                              String cityAddress, String codeZoneAddress, String streetAddress, String locationAddress) {
+public Parking addParking(String name, String description, ParkingType parkingType,
+                          double langitudeGeoPoint, double latitudeGeoPoint,
+                          String cityAddress, String codeZoneAddress, String streetAddress, String locationAddress) {
 
-        // Create a new Parking instance with the provided parameters
-        Parking parking = new Parking();
-        String newId = UUID.randomUUID().toString();
-        parking.setParkingId(newId);
-        parking.setName(name);
-        parking.setDescription(description);
-        parking.setCapacity(0);
-        parking.setParkingType(parkingType);
+    // Create a new Parking instance with the provided parameters
+    Parking parking = new Parking();
+    parking.setName(name);
+    parking.setDescription(description);
+    parking.setCapacity(0);
+    parking.setParkingType(parkingType);
 
-        // Set other properties for the GeoPoint and Address (assuming you have corresponding setters)
-        GeoPoint geoPoint = new GeoPoint();
-        geoPoint.setLongitude(langitudeGeoPoint);
-        geoPoint.setLatitude(latitudeGeoPoint);
-        geopointrepository.save(geoPoint);
-        parking.setCoordinate(geoPoint);
-        
-        Address address = new Address();
-        address.setCity(cityAddress);
-        address.setCodeZone(Integer.parseInt(codeZoneAddress)); // Assuming codeZone is an Integer
-        address.setStreet(streetAddress);
-        address.setLocation(locationAddress);
-        parking.setParkingAddress(address);
-        addressrepository.save(address);
-        // Allocate and add blocks
-        List<String> blocksnames = new ArrayList<>();
-       
-        parking.setBlocksNames(blocksnames);
+    // Save Parking entity
+    parking = parkingrepository.save(parking);
 
-        // Save the Parking instance to the repository
-        return parkingrepository.save(parking);
-    }
+    // Set GeoPoint
+    GeoPoint geoPoint = new GeoPoint();
+    geoPoint.setLongitude(langitudeGeoPoint);
+    geoPoint.setLatitude(latitudeGeoPoint);
+    geoPoint.setParking(parking); // Set the association to Parking
+    geopointrepository.save(geoPoint); // Save GeoPoint
+
+    // Set Address
+    Address address = new Address();
+    address.setCity(cityAddress);
+    address.setCodeZone(Integer.parseInt(codeZoneAddress));
+    address.setStreet(streetAddress);
+    address.setLocation(locationAddress);
+    address.setParking(parking); // Set the association to Parking
+    addressrepository.save(address); // Save Address
+
+    // Set the associations in Parking
+    parking.setCoordinate(geoPoint);
+    parking.setParkingAddress(address);
+
+    // Save the Parking instance again to update associations
+    parking = parkingrepository.save(parking);
+
+    return parking;
+}
 
     @Override
     public Parking UpdateParking(Parking NewParking, String ParkingName) {
@@ -102,6 +108,7 @@ public class ServiceParkingImpl implements ServiceParking {
     @Override
 public Parking GetParkingByName(String parkingName) {
     return parkingrepository.findParkingbyidentf(parkingName);
+
 }
 
 
@@ -111,59 +118,75 @@ public List<GetParkingDTO> GetAllParkings() {
     List<GetParkingDTO> parkingDTOs = new ArrayList<>();
 
     for (Parking parking : allParkings) {
-        parkingDTOs.add(GetParkingDTO.mapFromParking(parking));
+        // Vérification de nullité de l'adresse
+        if (parking.getParkingAddress() != null) {
+            parkingDTOs.add(GetParkingDTO.mapFromParking(parking));
+        }
     }
 
     return parkingDTOs;
 }
 
+
 // 
 @Override
-public void AddBlockToParking(String ParkingName, Block block) {
+public void AddBlockToParking(String parkingName, Block block) {
     try {
-        if (StringUtils.isBlank(ParkingName) || block == null) {
+        if (StringUtils.isBlank(parkingName) || block == null) {
             throw new IllegalArgumentException("ParkingName or block cannot be null or empty.");
         }
 
-        Parking parking = parkingrepository.findParkingbyidentf(ParkingName);
-
+        Parking parking = parkingrepository.findParkingbyidentf(parkingName);
         if (parking == null) {
-            throw new IllegalArgumentException("Parking not found with name: " + ParkingName);
+            throw new IllegalArgumentException("Parking not found with name: " + parkingName);
         }
 
-      //  Block existingBlock = blockrepository.findBlockByBlockName(block.getBlockName());
-
-
-        String newBlockId = UUID.randomUUID().toString();
-        block.setBlockId(newBlockId);
-        block.setParkingname(ParkingName);
-        List<String> places = generatePlaceNames(block.getCapacity(), block.getBlockName());
-        block.setPlaces(places);
-        parking.getBlocksNames().add(block.getBlockName());
-        blockrepository.save(block);
-
-        /*if (existingBlock != null) {
-            existingBlock.setCapacity(block.getCapacity());
-            existingBlock.setBlockType(block.getBlockType());
-            existingBlock.setPlaces(block.getPlaces());
-            blockrepository.save(existingBlock);
-        } else {
-            String newBlockId = UUID.randomUUID().toString();
-            block.setBlockId(newBlockId);
-            block.setParkingname(ParkingName);
-            List<String> places = generatePlaceNames(block.getCapacity(), block.getBlockName());
-            block.setPlaces(places);
-            parking.getBlocksNames().add(block.getBlockName());
-            blockrepository.save(block);
+        // Validate block properties
+        if (StringUtils.isBlank(block.getBlockName()) || block.getCapacity() == null || block.getCapacity() <= 0) {
+            throw new IllegalArgumentException("Block name or capacity is invalid.");
         }
-*/
+
+      block.setParking(parking);
+        // Save the block to ensure it has an ID
+        Block savedBlock = blockrepository.save(block);
+        
+        // Generate places for the block
+        List<Places> places = generatePlaces(savedBlock.getCapacity(), savedBlock.getBlockName(), savedBlock);
+
+        // Add block to parking and save both
+        parking.getBlocks().add(savedBlock);
         parkingrepository.save(parking);
+
+        // Save places
+        placerepository.saveAll(places);
+
+    } catch (IllegalArgumentException e) {
+        throw e; // Re-throw IllegalArgumentException with the original message
     } catch (Exception e) {
+        StringWriter sw = new StringWriter();
+        PrintWriter pw = new PrintWriter(sw);
+        e.printStackTrace(pw);
+        String stackTrace = sw.toString();
+        System.out.println(stackTrace);
         throw new RuntimeException("Error adding block to parking: " + e.getMessage(), e);
     }
 }
 
+private List<Places> generatePlaces(Integer capacity, String blockName, Block block) {
+    List<Places> places = new ArrayList<>();
 
+    for (int i = 1; i <= capacity; i++) {
+        Places place = new Places();
+        place.setName(blockName + i);
+        place.setState(true);
+        place.setBlock(block);
+        places.add(place);
+    }
+    return places;
+}
+
+
+////////////////////////////////////////////
 private List<String> generatePlaceNames(int capacity, String BlockName) {
     List<String> places = new ArrayList<>();
     for (int i = 1; i <= capacity; i++) {
@@ -171,13 +194,16 @@ private List<String> generatePlaceNames(int capacity, String BlockName) {
        Places place = new Places();
        place.setName(BlockName + i);
        place.setState(false);
-       place.setBlockname(BlockName);
+      // place.setBlockname(BlockName);
        placerepository.save(place);
 
     }
     return places;
 }
-    
+////////////////////////////////////////////////
+
+
+
  // update selon des cond
 
     @Override
@@ -239,10 +265,10 @@ public void AddPlaceToBlock(String BlockName, String ParkingName, Places place) 
                 Places newPlace = new Places();
                 newPlace.setName(place.getName());
                 newPlace.setState(place.isState());
-                newPlace.setBlockname(BlockName);
+                newPlace.setBlock(existingBlock);
 
                 // Ajouter la nouvelle place au bloc existant
-                existingBlock.getPlaces().add(newPlace.getName());
+                existingBlock.getPlaces().add(newPlace);
 
                 // Sauvegarder le bloc mis à jour dans la base de données
                 blockrepository.save(existingBlock);
@@ -293,8 +319,8 @@ public void AddPlaceToBlock(String BlockName, String ParkingName, Places place) 
         Block block = new Block();
     
         // Générer un nouvel ID pour le bloc
-        String newId = UUID.randomUUID().toString();
-        block.setBlockId(newId);
+       // String newId = UUID.randomUUID().toString();
+      //  block.setBlockId(newId);
     
         // Définir les propriétés du bloc
         block.setCapacity(capacity);
@@ -303,7 +329,7 @@ public void AddPlaceToBlock(String BlockName, String ParkingName, Places place) 
        
     
         // Ajouter des places au bloc
-        List<String> places = new ArrayList<>();
+        List<Places> places = new ArrayList<>();
        
         block.setPlaces(places);
     
@@ -323,68 +349,48 @@ public void AddPlaceToBlock(String BlockName, String ParkingName, Places place) 
     public Places GetPlaceByName(String PlaceName) {
         // TODO Auto-generated method stub
        
-        return placerepository.findPlacebyidentf(PlaceName);
-        
+        return placerepository.findPlaceByName(PlaceName);
+    
     }
 
     @Override
-    public List<Places> GetplacesByBlock(String BlockName) {
-        // Récupérer le bloc existant par son nom
-        Block existingBlock = blockrepository.findBlockByBlockName(BlockName);
-    
-        // Initialiser une liste pour stocker les noms des places
-        List<String> placesNames = existingBlock.getPlaces();
-        
-        // Initialiser une liste pour stocker les objets Places
-        List<Places> places = new ArrayList<>();
-    
-        // Parcourir la liste des noms de places
-        for (String placeName : placesNames) {
-            // Récupérer l'objet Place correspondant au nom de place
-            Places place = placerepository.findPlacebyidentf(placeName);
-            
-            // Vérifier si l'objet Place existe
-            if (place != null) {
-                // Ajouter l'objet Place à la liste des places
-                places.add(place);
-            }
-        }
-        // Retourner la liste des places
-        return places;
+public List<Places> GetplacesByBlock(String BlockName) {
+    // Récupérer le bloc existant par son nom
+    Block existingBlock = blockrepository.findBlockByBlockName(BlockName);
+
+    // Vérifier si le bloc existe
+    if (existingBlock == null) {
+        throw new IllegalArgumentException("Block not found with name: " + BlockName);
     }
 
-    @Override
-    public List<Block> GetBlocksByParking(String ParkingName) {
-        // TODO Auto-generated method stub
-          // Récupérer le bloc existant par son nom
-          Parking existingparking = parkingrepository.findParkingbyidentf(ParkingName);
-    
-          // Initialiser une liste pour stocker les noms des places
-          List<String> BlocksNames = existingparking.getBlocksNames();
-          
-          // Initialiser une liste pour stocker les objets Places
-          List<Block> Blocks = new ArrayList<>();
-      
-          // Parcourir la liste des noms de places
-          for (String BlockName : BlocksNames) {
-              // Récupérer l'objet Place correspondant au nom de place
-              Block block = blockrepository.findBlockByBlockName(BlockName);
-              
-              // Vérifier si l'objet Place existe
-              if (block != null) {
-                  // Ajouter l'objet Place à la liste des places
-                  Blocks.add(block);
-              }
-          }
-          // Retourner la liste des places
-          return Blocks;
-    
+    // Récupérer les places associées à ce bloc
+    List<Places> places = existingBlock.getPlaces();
+
+    // Retourner la liste des places
+    return places;
+}
+
+@Override
+public List<Block> GetBlocksByParking(String ParkingName) {
+    // Récupérer le parking existant par son nom
+    Parking existingParking = parkingrepository.findParkingbyidentf(ParkingName);
+
+    // Vérifier si le parking existe
+    if (existingParking == null) {
+        throw new IllegalArgumentException("Parking not found with name: " + ParkingName);
     }
+
+    // Récupérer les blocs associés au parking
+    List<Block> blocks = existingParking.getBlocks();
+
+    // Retourner la liste des blocs
+    return blocks;
+}
 
     @Override
     public void deletePlaceByName(String placeName, String blockName) {
         // Trouver la place à supprimer
-        Places place = placerepository.findPlacebyidentf(placeName);
+        Places place = placerepository.findPlaceByName(placeName);
         if (place == null) {
             throw new ObjectNotFoundException("La place avec le nom '" + placeName + "' n'a pas été trouvée.");
         }
@@ -417,7 +423,7 @@ public void AddPlaceToBlock(String BlockName, String ParkingName, Places place) 
             Block block = blockrepository.findBlockByBlockName(Blockname);
             if (block != null) {
                 // Recherche de la place dans le bloc
-                Places place = placerepository.findPlacebyidentf(PlaceName);
+                Places place = placerepository.findPlaceByName(PlaceName);
                 if (place != null) {
                     // Mise à jour de l'état de la place
                     place.setState(true);

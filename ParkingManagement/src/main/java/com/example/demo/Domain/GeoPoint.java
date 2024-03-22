@@ -1,20 +1,21 @@
 package com.example.demo.Domain;
-
-import java.util.UUID;
-
-import org.springframework.data.mongodb.core.mapping.Document;
-
+import jakarta.persistence.Entity;
 import jakarta.persistence.GeneratedValue;
 import jakarta.persistence.GenerationType;
 import jakarta.persistence.Id;
+import jakarta.persistence.JoinColumn;
 import jakarta.persistence.OneToOne;
+import jakarta.persistence.Table;
 
-@Document(collection = "geoPoints")
+
+@Entity
+@Table(name = "geoPoints")
+
 public class GeoPoint {
 
     @Id
-    @GeneratedValue(strategy = GenerationType.AUTO)
-    private String idGeolocation;
+    @GeneratedValue(strategy = GenerationType.IDENTITY)
+    private Long idGeolocation;
     private double longitude; // Corrected from langitude to longitude
     private double latitude;
 
@@ -26,11 +27,11 @@ public class GeoPoint {
     	 
 	}
 
-	public String getIdGeolocation() {
+	public Long getIdGeolocation() {
         return idGeolocation;
     }
 
-    public void setIdGeolocation(String idGeolocation) {
+    public void setIdGeolocation(Long idGeolocation) {
         this.idGeolocation = idGeolocation;
     }
 
@@ -58,7 +59,8 @@ public class GeoPoint {
         this.parking = parking;
     }
 
-    @OneToOne(mappedBy = "coordinate")
+    @OneToOne
+    @JoinColumn(name = "parking_id")
     private Parking parking;
 
 }

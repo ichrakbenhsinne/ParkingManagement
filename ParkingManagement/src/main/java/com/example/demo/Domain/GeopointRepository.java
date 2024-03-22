@@ -2,11 +2,11 @@ package com.example.demo.Domain;
 
 import java.util.UUID;
 
-import org.springframework.data.mongodb.repository.MongoRepository;
+import org.springframework.data.jpa.repository.JpaRepository;
 import org.springframework.stereotype.Repository;
 
 @Repository
-public interface GeopointRepository extends MongoRepository<GeoPoint, String>{
+public interface GeopointRepository extends JpaRepository<GeoPoint, Long>{
     
 
 

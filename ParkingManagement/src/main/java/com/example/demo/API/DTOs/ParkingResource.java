@@ -1,5 +1,6 @@
 package com.example.demo.API.DTOs;
 
+import java.util.ArrayList;
 import java.util.List;
 
 import org.springframework.beans.factory.annotation.Autowired;
@@ -44,15 +45,17 @@ public class ParkingResource {
     }
 
     @GetMapping("/searchByName/{parkingName}")
-    public ResponseEntity<Parking> searchParkingByName(@PathVariable String parkingName) {
+    public ResponseEntity<GetParkingDTO> searchParkingByName(@PathVariable String parkingName) {
         Parking parking = serviceParking.GetParkingByName(parkingName);
-
+        
         if (parking != null) {
-            return ResponseEntity.ok(parking);
+            GetParkingDTO parkingDTO = GetParkingDTO.mapFromParking(parking);
+            return ResponseEntity.ok(parkingDTO);
         } else {
             return ResponseEntity.notFound().build();
         }
     }
+    
 
     @GetMapping("/GetAllPark")
     public List<GetParkingDTO> GetAllParkings( )
@@ -126,20 +129,32 @@ public class ParkingResource {
         return serviceParking.GetPlaceByName(PlaceName);
     }
 
-  
-     @GetMapping("/GetplacesByBlock/{blockName}")
-     public List <Places> getplacesByBlock(@PathVariable String blockName)
-     {
+  @GetMapping("/GetplacesByBlock/{blockName}")
+public List<GetPlaceDTO> getplacesByBlock(@PathVariable String blockName) {
+    List<Places> places = serviceParking.GetplacesByBlock(blockName);
+    List<GetPlaceDTO> placeDTOs = new ArrayList<>();
 
-        return serviceParking.GetplacesByBlock(blockName);
-     }
+    for (Places place : places) {
+        placeDTOs.add(GetPlaceDTO.mapFromPlaces(place));
+    }
+
+    return placeDTOs;
+}
 
 
-     @GetMapping("/GetBlocksByParking/{ParkingName}")
-     public List <Block> getblocksByParking(@PathVariable String ParkingName)
-     {
-        return serviceParking.GetBlocksByParking(ParkingName);
-     }
+
+@GetMapping("/GetBlocksByParking/{ParkingName}")
+public List<GetBlockDTO> getBlocksByParking(@PathVariable String ParkingName) {
+    List<Block> blocks = serviceParking.GetBlocksByParking(ParkingName);
+    List<GetBlockDTO> blockDTOs = new ArrayList<>();
+
+    for (Block block : blocks) {
+        blockDTOs.add(GetBlockDTO.mapFromBlock(block));
+    }
+
+    return blockDTOs;
+}
+
 
      @DeleteMapping("/DeletePlaceByName/{placeName}/{blockname}")
      public void DeletePlaceByName(@PathVariable String placeName, @PathVariable String blockname) {

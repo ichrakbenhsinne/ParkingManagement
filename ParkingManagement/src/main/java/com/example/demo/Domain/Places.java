@@ -1,23 +1,28 @@
 package com.example.demo.Domain;
-
 import java.util.UUID;
+import jakarta.persistence.ManyToOne;
+import jakarta.persistence.Table;
+import jakarta.persistence.Entity;
 import jakarta.persistence.GeneratedValue;
 import jakarta.persistence.GenerationType;
-import org.springframework.data.annotation.Id;
-import com.fasterxml.jackson.annotation.JsonProperty;
-import jakarta.persistence.ManyToOne;
+import jakarta.persistence.Id;
+
+
+
+@Entity
+@Table(name = "Places")
 
 public class Places {
 
-     @Id
-     private String id;
-
+    @Id
+    @GeneratedValue(strategy = GenerationType.IDENTITY)
+    private Long id;
     
    // private String placeName;
-    public String getId() {
+    public Long getId() {
         return id;
     }
-    public void setId(String id) {
+    public void setId(Long id) {
         this.id = id;
     }
     public String getName() {
@@ -26,16 +31,20 @@ public class Places {
     public void setName(String name) {
         Name = name;
     }
-    public String getBlockname() {
-        return blockname;
+    public Block getBlock() {
+        return block;
     }
-    public void setBlockname(String blockname) {
-        this.blockname = blockname;
+    public void setBlock(Block block) {
+        this.block = block;
     }
     private String Name;
     private boolean state;
-  //  @ManyToOne
-    private String blockname;
+
+   @ManyToOne
+   private Block block;
+   // @JoinColumn(name = "block_id")
+   // @JsonIgnore
+    //private Block block;
 
    
     
@@ -47,7 +56,7 @@ public class Places {
     public void setState(boolean state) {
         this.state = state;
     }
-    public Places(String placeId, boolean state) {
+    public Places(Long placeId, boolean state) {
         this.id = placeId;
         this.state = state;
     }

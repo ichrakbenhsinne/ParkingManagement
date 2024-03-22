@@ -2,21 +2,15 @@ package com.example.demo.Domain;
 
 import java.util.UUID;
 
-
-import org.springframework.data.mongodb.repository.MongoRepository;
+import org.springframework.data.jpa.repository.JpaRepository;
+import org.springframework.data.jpa.repository.Query;
+import org.springframework.data.repository.query.Param;
 import org.springframework.stereotype.Repository;
-import org.springframework.data.mongodb.repository.Query;
 
 @Repository
-public interface ParkingRepository extends MongoRepository<Parking, String> {
+public interface ParkingRepository extends JpaRepository<Parking, Long> {
     // Vous pouvez ajouter des méthodes personnalisées ici si nécessaire
 
-
-   
-	@Query("{name:'?0'}")
-	Parking findParkingbyidentf(String name);
-	
-
-
-
+    @Query("SELECT p FROM Parking p WHERE p.name = :name")
+    Parking findParkingbyidentf(@Param("name") String name);
 }
