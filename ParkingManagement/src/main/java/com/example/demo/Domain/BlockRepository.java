@@ -11,6 +11,9 @@ public interface BlockRepository extends JpaRepository<Block, Long> {
     
     @Query("SELECT b FROM Block b WHERE b.blockName = ?1")
     Block findBlockByBlockName(@Param("blockName")String blockName);
+
+    @Query("SELECT b FROM Block b WHERE b.id = ?1")
+    Block findBlockByid(@Param("id")Long id);
     
 }
 

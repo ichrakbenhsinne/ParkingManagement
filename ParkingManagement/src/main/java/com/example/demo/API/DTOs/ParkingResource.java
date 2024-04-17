@@ -4,11 +4,14 @@ import java.util.ArrayList;
 import java.util.List;
 
 import org.springframework.beans.factory.annotation.Autowired;
+import org.springframework.http.HttpStatus;
 import org.springframework.http.ResponseEntity;
+import org.springframework.web.bind.annotation.CrossOrigin;
 import org.springframework.web.bind.annotation.DeleteMapping;
 import org.springframework.web.bind.annotation.GetMapping;
 import org.springframework.web.bind.annotation.PathVariable;
 import org.springframework.web.bind.annotation.PostMapping;
+import org.springframework.web.bind.annotation.PutMapping;
 import org.springframework.web.bind.annotation.RequestBody;
 import org.springframework.web.bind.annotation.RequestMapping;
 import org.springframework.web.bind.annotation.RestController;
@@ -19,6 +22,8 @@ import com.example.demo.Domain.Parking;
 import com.example.demo.Domain.Places;
 
 @RestController
+@CrossOrigin(origins = "http://localhost:4200")
+
 @RequestMapping("/parking")
 public class ParkingResource {
 
@@ -29,7 +34,7 @@ public class ParkingResource {
 
     @PostMapping("/addParking")
     public Parking addParking(@RequestBody AddParkingDTO addParkingDTO) {
-    	
+    	System.out.println(addParkingDTO.state());
     	return serviceParking.addParking(
                 addParkingDTO.name(),
                 addParkingDTO.description(),
@@ -41,12 +46,14 @@ public class ParkingResource {
                 addParkingDTO.CityAddress(),
                 addParkingDTO.CodeZoneAddress(),
                 addParkingDTO.streetAddress(),
-                addParkingDTO.LocationAddress());
+                addParkingDTO.LocationAddress(),
+                addParkingDTO.state()
+                );
     }
 
     @GetMapping("/searchByName/{parkingName}")
     public ResponseEntity<GetParkingDTO> searchParkingByName(@PathVariable String parkingName) {
-        Parking parking = serviceParking.GetParkingByName(parkingName);
+        Parking parking = serviceParking.getParkingByName(parkingName);
         
         if (parking != null) {
             GetParkingDTO parkingDTO = GetParkingDTO.mapFromParking(parking);
@@ -58,9 +65,9 @@ public class ParkingResource {
     
 
     @GetMapping("/GetAllPark")
-    public List<GetParkingDTO> GetAllParkings( )
+    public List<GetParkingDTO> getAllParkings( )
     {
-        return serviceParking.GetAllParkings();
+        return serviceParking.getAllParkings();
     }
 
     
@@ -69,12 +76,20 @@ public class ParkingResource {
     public void deleteParking(@PathVariable String parkname)
 
     {
-       serviceParking.DeleteParking(parkname);
+       serviceParking.deleteParking(parkname);
+
+    }
+
+    @DeleteMapping("/deleteBlockByName/{blockname}")
+    public void deleteBlock(@PathVariable String blockname)
+
+    {
+       serviceParking.deleteBlock(blockname);
 
     }
 
     @PostMapping("/addblock")
-    public Block AddBlock(@RequestBody AddBlockDTO AddBlockDTO) {
+    public Block addBlock(@RequestBody AddBlockDTO AddBlockDTO) {
         // Ajoutez des logs pour déboguer
         System.out.println("Capacity: " + AddBlockDTO.capacity());
         System.out.println("BlockName: " + AddBlockDTO.blockName());
@@ -89,49 +104,51 @@ public class ParkingResource {
 
 
     @GetMapping("/GetBlockByName/{Blockname}")
-    public Block GetBlockByName(@PathVariable String Blockname)
+    public Block getBlockByName(@PathVariable String Blockname)
 
     {
-        return serviceParking.GetBlockByName(Blockname);
+        return serviceParking.getBlockByName(Blockname);
     }
+
+
+
 
     @GetMapping("/GetCapacityByBlock/{Blockname}")
-    public Integer GetCapacityByBlock(@PathVariable String Blockname)
+    public Integer getCapacityByBlock(@PathVariable String Blockname)
 
     {
-        return serviceParking.GetBlockByName(Blockname).getCapacity();
+        return serviceParking.getBlockByName(Blockname).getCapacity();
     }
 
-    @GetMapping("/AddBlockToParking/{ParkingName}")
-    public Parking AddBlockToParking(@PathVariable String ParkingName,@RequestBody Block block)
-
+    @PostMapping("/AddBlockToParking/{ParkingName}")
+    public Parking addBlockToParking(@PathVariable String ParkingName,@RequestBody Block block)
     {
 
-       serviceParking.AddBlockToParking(ParkingName, block);
+       serviceParking.addBlockToParking(ParkingName, block);
        System.out.println(block.getBlockName());
-       return serviceParking.GetParkingByName(ParkingName);
+       return serviceParking.getParkingByName(ParkingName);
     }
 
-    @GetMapping("/AddPlaceToBlock/{ParkingName}/{BlockName}")
-    public Block AddPlaceToParking(@PathVariable String ParkingName, @PathVariable String BlockName,@RequestBody Places place)
+    @PostMapping("/AddPlaceToBlock/{BlockName}")
+    public Block addPlaceToblock( @PathVariable String BlockName,@RequestBody Places place)
     
     {
-        System.out.println(place.getName());
-      serviceParking.AddPlaceToBlock(BlockName, ParkingName, place);
-      return serviceParking.GetBlockByName(BlockName);
+        System.out.println(place.getname());
+      serviceParking.addPlaceToBlock(BlockName, place);
+      return serviceParking.getBlockByName(BlockName);
 
     }
 
     @GetMapping("/GetPlaceByName/{PlaceName}")
-    public Places GetPlaceByName(@PathVariable String PlaceName)
+    public Places getPlaceByName(@PathVariable String PlaceName)
 
     {
-        return serviceParking.GetPlaceByName(PlaceName);
+        return serviceParking.getPlaceByName(PlaceName);
     }
 
   @GetMapping("/GetplacesByBlock/{blockName}")
 public List<GetPlaceDTO> getplacesByBlock(@PathVariable String blockName) {
-    List<Places> places = serviceParking.GetplacesByBlock(blockName);
+    List<Places> places = serviceParking.getPlacesByBlock(blockName);
     List<GetPlaceDTO> placeDTOs = new ArrayList<>();
 
     for (Places place : places) {
@@ -145,7 +162,7 @@ public List<GetPlaceDTO> getplacesByBlock(@PathVariable String blockName) {
 
 @GetMapping("/GetBlocksByParking/{ParkingName}")
 public List<GetBlockDTO> getBlocksByParking(@PathVariable String ParkingName) {
-    List<Block> blocks = serviceParking.GetBlocksByParking(ParkingName);
+    List<Block> blocks = serviceParking.getBlocksByParking(ParkingName);
     List<GetBlockDTO> blockDTOs = new ArrayList<>();
 
     for (Block block : blocks) {
@@ -157,7 +174,7 @@ public List<GetBlockDTO> getBlocksByParking(@PathVariable String ParkingName) {
 
 
      @DeleteMapping("/DeletePlaceByName/{placeName}/{blockname}")
-     public void DeletePlaceByName(@PathVariable String placeName, @PathVariable String blockname) {
+     public void deletePlaceByName(@PathVariable String placeName, @PathVariable String blockname) {
          serviceParking.deletePlaceByName(placeName, blockname);
      }
      
@@ -165,29 +182,60 @@ public List<GetBlockDTO> getBlocksByParking(@PathVariable String ParkingName) {
     
     
    @GetMapping("/ModifiePlaceStatusToAvailable/{parkingName}/{BlockName}/{PlaceName}")
-   public boolean UpdatePlaceStateToAvailable(@PathVariable String PlaceName, @PathVariable String BlockName, @PathVariable String parkingName) {
-       return serviceParking.UpdatePlaceStateToAvailable(parkingName, BlockName, PlaceName);
+   public boolean updatePlaceStateToAvailable(@PathVariable String PlaceName, @PathVariable String BlockName, @PathVariable String parkingName) {
+       return serviceParking.updatePlaceStateToAvailable(parkingName, BlockName, PlaceName);
    }
    
    @GetMapping("/ModifiePlaceStatusToNotAvailable/{parkingName}/{BlockName}/{PlaceName}")
-   public boolean UpdatePlaceStateToNotAvailable(@PathVariable String PlaceName, @PathVariable String BlockName, @PathVariable String parkingName) {
+   public boolean updatePlaceStateToNotAvailable(@PathVariable String PlaceName, @PathVariable String BlockName, @PathVariable String parkingName) {
        // Utilisez ! pour inverser le résultat booléen retourné par serviceParking.UpdatePlaceStateToAvailable
-       return !serviceParking.UpdatePlaceStateToAvailable(parkingName, BlockName, PlaceName);
+       return !serviceParking.updatePlaceStateToAvailable(parkingName, BlockName, PlaceName);
    }
    
 
 
    //  @GetMapping("/GetCapacityByParking/{ParkingName}")
    @GetMapping("/CloseBlock/{ParkingName}/{BlockName}")
-public void CloseBlock(@PathVariable String BlockName, @PathVariable String ParkingName) {
-    serviceParking.FermerBlock(BlockName, ParkingName);
+public void closeBlock(@PathVariable String BlockName, @PathVariable String ParkingName) {
+    serviceParking.fermerBlock(BlockName, ParkingName);
     System.out.println("Parking closed successfully");
 }
 
 @GetMapping("/OpenBlock/{ParkingName}/{BlockName}")
-public void OpenBlock(@PathVariable String BlockName, @PathVariable String ParkingName) {
-    serviceParking.OuvrirBlock(BlockName, ParkingName);
+public void openBlock(@PathVariable String BlockName, @PathVariable String ParkingName) {
+    serviceParking.ouvrirBlock(BlockName, ParkingName);
     System.out.println("Parking opened successfully");
+}
+
+@PutMapping("/UpdateParking/{id}")
+public ResponseEntity<Object> updateParking(@PathVariable Long id, @RequestBody Parking newParking) {
+    Parking updatedParking = serviceParking.updateParking(newParking, id);
+    if (updatedParking != null) {
+        GetParkingDTO parkingDTO = GetParkingDTO.mapFromParking(updatedParking);
+        return ResponseEntity.ok(parkingDTO);
+    } else {
+        // Gérer le cas où updateParking renvoie null
+        // Vous pouvez renvoyer une réponse avec un message d'erreur approprié
+        return ResponseEntity.status(HttpStatus.NOT_FOUND).body("Parking not found");
+    }
+}
+
+@PutMapping("/UpdateBlock/{id}")
+public ResponseEntity<Object> updateBlock(@PathVariable Long id, @RequestBody Block newBlock) {
+    GetBlockDTO updatedBlock = serviceParking.updateBlock(id, newBlock);
+    if (updatedBlock != null) {
+        return ResponseEntity.ok(updatedBlock);
+    } else {
+        // Retournez une réponse avec un message d'erreur approprié
+        return ResponseEntity.status(HttpStatus.NOT_FOUND).body("Block not found");
+    }
+
+}
+@PutMapping("/UpdatePlace/{id}")
+public GetPlaceDTO updatePlace(@PathVariable Long id, @RequestBody Places newPlace) {
+    System.out.println(newPlace.getname());
+    return serviceParking.updatePlace(id, newPlace);
+   
 }
 
 }

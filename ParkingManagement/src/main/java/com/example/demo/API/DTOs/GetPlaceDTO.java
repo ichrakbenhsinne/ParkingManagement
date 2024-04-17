@@ -2,14 +2,14 @@ package com.example.demo.API.DTOs;
 
 import com.example.demo.Domain.Places;
 
-public record GetPlaceDTO(String placeName, String blockName, boolean state) {
+public record GetPlaceDTO(Long id, String name, String blockName, boolean state) {
 
     public static GetPlaceDTO mapFromPlaces(Places place) {
         return new GetPlaceDTO(
-            place.getName(),
+            place.getId(),
+            place.getname(),
             place.getBlock().getBlockName(),
             place.isState()
         );
     }
-    
 }

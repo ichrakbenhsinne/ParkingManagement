@@ -4,11 +4,17 @@ import java.io.PrintWriter;
 import java.io.StringWriter;
 import java.util.ArrayList;
 import java.util.List;
+import java.util.Optional;
 import java.util.UUID;
+
+
 import org.springframework.beans.factory.annotation.Autowired;
 import org.springframework.stereotype.Service;
 
+import com.example.demo.API.DTOs.AddParkingDTO;
+import com.example.demo.API.DTOs.GetBlockDTO;
 import com.example.demo.API.DTOs.GetParkingDTO;
+import com.example.demo.API.DTOs.GetPlaceDTO;
 import com.example.demo.Domain.Address;
 import com.example.demo.Domain.AddressRepository;
 import com.example.demo.Domain.Block;
@@ -20,10 +26,13 @@ import com.example.demo.Domain.Parking;
 import com.example.demo.Domain.ParkingRepository;
 import com.example.demo.Domain.ParkingType;
 import com.example.demo.Domain.Places;
+import com.example.demo.Domain.Status;
 import com.example.demo.Domain.placesRepository;
+import com.example.demo.Exceptions.DeleteImpossible;
 import com.example.demo.Exceptions.ObjectNotFoundException;
 
 import io.micrometer.common.util.StringUtils;
+import jakarta.persistence.EntityNotFoundException;
 
 @Service
 public class ServiceParkingImpl implements ServiceParking {
@@ -42,7 +51,7 @@ public class ServiceParkingImpl implements ServiceParking {
     @Override
 public Parking addParking(String name, String description, ParkingType parkingType,
                           double langitudeGeoPoint, double latitudeGeoPoint,
-                          String cityAddress, String codeZoneAddress, String streetAddress, String locationAddress) {
+                          String cityAddress, Integer codeZoneAddress, String streetAddress, String locationAddress, Status state) {
 
     // Create a new Parking instance with the provided parameters
     Parking parking = new Parking();
@@ -50,7 +59,7 @@ public Parking addParking(String name, String description, ParkingType parkingTy
     parking.setDescription(description);
     parking.setCapacity(0);
     parking.setParkingType(parkingType);
-
+    parking.setState(state);
     // Save Parking entity
     parking = parkingrepository.save(parking);
 
@@ -64,7 +73,7 @@ public Parking addParking(String name, String description, ParkingType parkingTy
     // Set Address
     Address address = new Address();
     address.setCity(cityAddress);
-    address.setCodeZone(Integer.parseInt(codeZoneAddress));
+    address.setCodeZone(codeZoneAddress);
     address.setStreet(streetAddress);
     address.setLocation(locationAddress);
     address.setParking(parking); // Set the association to Parking
@@ -78,42 +87,85 @@ public Parking addParking(String name, String description, ParkingType parkingTy
     parking = parkingrepository.save(parking);
 
     return parking;
+
+
+}
+
+@Override
+public Parking updateParking(Parking newParking, Long id) {
+    Parking parkingToUpdate = parkingrepository.findparkingById(id);
+    System.out.println(newParking.getState());
+    
+    if (parkingToUpdate != null) {
+        parkingToUpdate.setName(newParking.getName());
+        parkingToUpdate.setDescription(newParking.getDescription());
+        
+        // Vérifier si l'objet GeoPoint existant dans le parking est null
+        if (parkingToUpdate.getCoordinate() == null) {
+            parkingToUpdate.setCoordinate(new GeoPoint()); // Créer un nouvel objet GeoPoint si null
+        }
+        
+        // Vérifier si la latitude et la longitude de la nouvelle position sont null
+        if (newParking.getCoordinate() != null) {
+            // Assurez-vous que les coordonnées de la nouvelle position sont correctement définies dans l'objet GeoPoint
+            parkingToUpdate.getCoordinate().setLatitude(newParking.getCoordinate().getLatitude());
+            parkingToUpdate.getCoordinate().setLongitude(newParking.getCoordinate().getLongitude());
+        }
+
+        parkingToUpdate.setParkingAddress(newParking.getParkingAddress());
+        parkingToUpdate.setParkingType(newParking.getParkingType());
+        parkingToUpdate.setState(newParking.getState());
+       
+        return parkingrepository.save(parkingToUpdate);
+    } else {
+        return null; // Parking non trouvé, renvoie null
+    }
 }
 
     @Override
-    public Parking UpdateParking(Parking NewParking, String ParkingName) {
-        // TODO Auto-generated method stub
-        throw new UnsupportedOperationException("Unimplemented method 'UpdateParking'");
-    }
+public void deleteParking(String parkingName) {
+    // Recherche du parking à supprimer par son nom
+    Parking parkingToDelete = parkingrepository.findParkingbyidentf(parkingName);
 
-    @Override
-    public void DeleteParking(String parkingName) {
-        // Recherche du parking à supprimer par son nom
-        Parking parkingToDelete = parkingrepository.findParkingbyidentf(parkingName);
-
-        // Vérification si le parking existe
-        if (parkingToDelete != null) {
-            // Supprimez le parking du référentiel
+    // Vérification si le parking existe
+    if (parkingToDelete != null) {
+        // Vérifie si la liste des blocs est nulle ou vide
+        if (parkingToDelete.getBlocks() == null || parkingToDelete.getBlocks().isEmpty()) {
+            // Si oui, supprimez le parking
+            addressrepository.delete(parkingToDelete.getParkingAddress());
+            geopointrepository.delete(parkingToDelete.getCoordinate());
             parkingrepository.delete(parkingToDelete);
         } else {
-            // Gérer le cas où le parking n'existe pas
-            // Vous pouvez lever une exception, retourner un code d'erreur, etc.
-            // Par exemple, vous pouvez lever une exception NotFoundException
-             }
+            // Sinon, supprimez chaque bloc associé au parking
+            for (Block block : parkingToDelete.getBlocks()) {
+                deleteBlock(block.getBlockName());
+            }
+
+            // Après avoir supprimé tous les blocs, supprimez les autres entités liées au parking
+             addressrepository.delete(parkingToDelete.getParkingAddress());
+            geopointrepository.delete(parkingToDelete.getCoordinate());
+            parkingrepository.delete(parkingToDelete);
+        }
+    } else {
+        // Gérer le cas où le parking n'existe pas
+        // Vous pouvez lever une exception, retourner un code d'erreur, etc.
+        // Par exemple, vous pouvez lever une exception NotFoundException
     }
+}
 
 
+    
 
 
     @Override
-public Parking GetParkingByName(String parkingName) {
+public Parking getParkingByName(String parkingName) {
     return parkingrepository.findParkingbyidentf(parkingName);
 
 }
 
 
 @Override
-public List<GetParkingDTO> GetAllParkings() {
+public List<GetParkingDTO> getAllParkings() {
     List<Parking> allParkings = parkingrepository.findAll();
     List<GetParkingDTO> parkingDTOs = new ArrayList<>();
 
@@ -130,7 +182,7 @@ public List<GetParkingDTO> GetAllParkings() {
 
 // 
 @Override
-public void AddBlockToParking(String parkingName, Block block) {
+public void addBlockToParking(String parkingName, Block block) {
     try {
         if (StringUtils.isBlank(parkingName) || block == null) {
             throw new IllegalArgumentException("ParkingName or block cannot be null or empty.");
@@ -177,7 +229,7 @@ private List<Places> generatePlaces(Integer capacity, String blockName, Block bl
 
     for (int i = 1; i <= capacity; i++) {
         Places place = new Places();
-        place.setName(blockName + i);
+        place.setname(blockName + i);
         place.setState(true);
         place.setBlock(block);
         places.add(place);
@@ -192,7 +244,7 @@ private List<String> generatePlaceNames(int capacity, String BlockName) {
     for (int i = 1; i <= capacity; i++) {
         places.add(BlockName + i);
        Places place = new Places();
-       place.setName(BlockName + i);
+       place.setname(BlockName + i);
        place.setState(false);
       // place.setBlockname(BlockName);
        placerepository.save(place);
@@ -206,16 +258,29 @@ private List<String> generatePlaceNames(int capacity, String BlockName) {
 
  // update selon des cond
 
+ @Override
+ public GetBlockDTO updateBlock(Long id, Block newBlock) {
+     Block blockToUpdate = blockrepository.findBlockByid(id);
+     if (blockToUpdate != null) {
+         blockToUpdate.setBlockName(newBlock.getBlockName());
+         blockToUpdate.setBlockType(newBlock.getBlockType());
+         blockToUpdate.setCapacity(newBlock.getCapacity());
+         blockToUpdate.setIsOppen(newBlock.getIsOppen());
+ 
+         // Assurez-vous de sauvegarder la mise à jour du bloc
+         Block updatedBlock = blockrepository.save(blockToUpdate);
+         
+         // Assurez-vous de retourner le DTO mis à jour à partir du bloc mis à jour
+         return GetBlockDTO.mapFromBlock(updatedBlock);
+     } else {
+         return null;
+     }
+ }
+ 
+
+
     @Override
-    public Void UpdateBlock(String BlockName, String ParkingName) {
-        // TODO Auto-generated method stub
-        throw new UnsupportedOperationException("Unimplemented method 'UpdateBlock'");
-    }
-
-
-
-    @Override
-public void FermerBlock(String BlockName, String ParkingName) {
+public void fermerBlock(String BlockName, String ParkingName) {
     Parking parking = parkingrepository.findParkingbyidentf(ParkingName);
     if (parking != null) {
         Block block = blockrepository.findBlockByBlockName(BlockName);
@@ -233,7 +298,7 @@ public void FermerBlock(String BlockName, String ParkingName) {
 
 
     @Override
-    public void OuvrirBlock(String BlockName, String ParkingName) {
+    public void ouvrirBlock(String BlockName, String ParkingName) {
         Parking parking = parkingrepository.findParkingbyidentf(ParkingName);
         if (parking != null) {
             Block block = blockrepository.findBlockByBlockName(BlockName);
@@ -251,53 +316,42 @@ public void FermerBlock(String BlockName, String ParkingName) {
 
 
     @Override
-public void AddPlaceToBlock(String BlockName, String ParkingName, Places place) {
-    try {
-        // Récupérer le parking par son nom
-        Parking parking = parkingrepository.findParkingbyidentf(ParkingName);
-       
-        if (parking != null) {
+    public void addPlaceToBlock(String blockName, Places place) {
+        try {
             // Vérifier si le bloc existe déjà dans la base de données
-            Block existingBlock = blockrepository.findBlockByBlockName(BlockName);
-
+            Block existingBlock = blockrepository.findBlockByBlockName(blockName);
+    
             if (existingBlock != null) {
                 // Créer une nouvelle place à partir des données fournies
                 Places newPlace = new Places();
-                newPlace.setName(place.getName());
+                newPlace.setname(place.getname());
                 newPlace.setState(place.isState());
-                newPlace.setBlock(existingBlock);
-
+                newPlace.setBlock(existingBlock); // Définir le bloc pour la nouvelle place
+    
                 // Ajouter la nouvelle place au bloc existant
                 existingBlock.getPlaces().add(newPlace);
-
-                // Sauvegarder le bloc mis à jour dans la base de données
+    
+                // Sauvegarder le bloc mis à jour dans la base de données, ce qui enregistre également la nouvelle place
                 blockrepository.save(existingBlock);
-
-                // Sauvegarder la nouvelle place dans la base de données
-                placerepository.save(newPlace);
             } else {
                 System.out.println("Block doesn't exist");
             }
-            // Sauvegarder le parking mis à jour
-            parkingrepository.save(parking);
-        } else {
-            System.out.println("Parking not found");
+        } catch (Exception e) {
+            System.out.println("Error adding place to block: " + e.getMessage());
         }
-    } catch (Exception e) {
-        System.out.println("Error adding place to block: " + e.getMessage());
     }
-}
+    
 
 
 ////////////////////////////////////////////////
     @Override
-    public void FermerParking(String ParkingName) {
+    public void fermerParking(String ParkingName) {
         // TODO Auto-generated method stub
         throw new UnsupportedOperationException("Unimplemented method 'FermerParking'");
     }
 
     @Override
-    public void OuvrirParking(String ParkingName) {
+    public void ouvrirParking(String ParkingName) {
         // TODO Auto-generated method stub
         throw new UnsupportedOperationException("Unimplemented method 'OuvrirParking'");
     }
@@ -306,7 +360,7 @@ public void AddPlaceToBlock(String BlockName, String ParkingName, Places place) 
 
 /// publier le parking dans le map 
     @Override
-    public Void PublierParking(Parking parking) {
+    public Void publierParking(Parking parking) {
         // TODO Auto-generated method stub
         throw new UnsupportedOperationException("Unimplemented method 'PublierParking'");
     }
@@ -338,7 +392,7 @@ public void AddPlaceToBlock(String BlockName, String ParkingName, Places place) 
     }
 
     @Override
-    public Block GetBlockByName(String BlockName) {
+    public Block getBlockByName(String BlockName) {
         // TODO Auto-generated method stub
 
       return blockrepository.findBlockByBlockName(BlockName);
@@ -346,7 +400,7 @@ public void AddPlaceToBlock(String BlockName, String ParkingName, Places place) 
         }
 
     @Override
-    public Places GetPlaceByName(String PlaceName) {
+    public Places getPlaceByName(String PlaceName) {
         // TODO Auto-generated method stub
        
         return placerepository.findPlaceByName(PlaceName);
@@ -354,7 +408,7 @@ public void AddPlaceToBlock(String BlockName, String ParkingName, Places place) 
     }
 
     @Override
-public List<Places> GetplacesByBlock(String BlockName) {
+public List<Places> getPlacesByBlock(String BlockName) {
     // Récupérer le bloc existant par son nom
     Block existingBlock = blockrepository.findBlockByBlockName(BlockName);
 
@@ -371,7 +425,7 @@ public List<Places> GetplacesByBlock(String BlockName) {
 }
 
 @Override
-public List<Block> GetBlocksByParking(String ParkingName) {
+public List<Block> getBlocksByParking(String ParkingName) {
     // Récupérer le parking existant par son nom
     Parking existingParking = parkingrepository.findParkingbyidentf(ParkingName);
 
@@ -402,19 +456,18 @@ public List<Block> GetBlocksByParking(String ParkingName) {
         }
         
         // Supprimer la place de la liste des places de l'objet Block
-        if (block.getPlaces().contains(placeName)) {
-            block.getPlaces().remove(placeName);
+        if (block.getPlaces().contains(place)) {
+            block.getPlaces().remove(place);
             blockrepository.save(block);
         } else {
             throw new ObjectNotFoundException("La place avec le nom '" + placeName + "' n'est pas présente dans le bloc '" + blockName + "'.");
         }
-        
         // Supprimer la place de la base de données
         placerepository.deleteById(place.getId());
     }
 
     @Override
-    public Boolean UpdatePlaceStateToAvailable(String ParkingName, String Blockname, String PlaceName) {
+    public Boolean updatePlaceStateToAvailable(String ParkingName, String Blockname, String PlaceName) {
         // TODO Auto-generated method stub
        
         Parking parking = parkingrepository.findParkingbyidentf(ParkingName);
@@ -442,6 +495,66 @@ public List<Block> GetBlocksByParking(String ParkingName) {
             throw new ObjectNotFoundException("Parking not found");
         }
     }
+
+    @Override
+public void deleteBlock(String blockName) {
+    // Recherche du bloc à supprimer par son nom
+    Block block = blockrepository.findBlockByBlockName(blockName);
+    
+    // Vérifie si le bloc existe
+    if (block != null) {
+        // Vérifie si toutes les places sont libres
+        boolean allPlacesFree = true;
+        for (Places place : block.getPlaces()) {
+            if (!place.isState()) {
+                allPlacesFree = false;
+                break;
+            }
+        }
+        
+        if (allPlacesFree) {
+            // Supprime toutes les places associées
+            for (Places place : block.getPlaces()) {
+                placerepository.delete(place);
+            }
+            
+            // Ensuite, supprime le bloc lui-même
+            blockrepository.delete(block);
+        } else {
+            
+            throw new DeleteImpossible("impossible de supprimer le block! il ya des places reservee !!");
+            // Gérer le cas où des places sont réservées
+            // Vous pouvez lever une exception, retourner un code d'erreur, etc.
+            // Par exemple, vous pouvez lever une exception BlockNotFreeException
+        }
+    } else {
+        throw new ObjectNotFoundException("block not found");
+        // Gérer le cas où le bloc n'existe pas
+        // Vous pouvez lever une exception, retourner un code d'erreur, etc.
+        // Par exemple, vous pouvez lever une exception NotFoundException
+    }
+}
+
+@Override
+public GetPlaceDTO updatePlace(Long id, Places newPlace) {
+    // Récupérer l'emplacement à mettre à jour
+    Places placeToUpdate = placerepository.findPlaceByid(id);
+    
+    if (placeToUpdate != null) {
+        // Mettre à jour les propriétés de l'emplacement avec les nouvelles valeurs
+        placeToUpdate.setname(newPlace.getname());
+        placeToUpdate.setState(newPlace.isState());
+
+        // Assurer la sauvegarde de la mise à jour de l'emplacement
+        Places updatedPlace = placerepository.save(placeToUpdate);
+
+        // Retourner le DTO mis à jour à partir de l'emplacement mis à jour
+        return GetPlaceDTO.mapFromPlaces(updatedPlace);
+    } else {
+        return null; // Ou lancez une exception pour indiquer que l'emplacement n'a pas été trouvé
+    }
+}
+
     
     
        

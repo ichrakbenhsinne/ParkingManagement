@@ -13,4 +13,7 @@ public interface ParkingRepository extends JpaRepository<Parking, Long> {
 
     @Query("SELECT p FROM Parking p WHERE p.name = :name")
     Parking findParkingbyidentf(@Param("name") String name);
+
+    @Query("SELECT p FROM Parking p WHERE p.id = :id")
+	Parking findparkingById(@Param("id") Long id);
 }

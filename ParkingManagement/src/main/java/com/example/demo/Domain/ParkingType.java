@@ -3,5 +3,7 @@ package com.example.demo.Domain;
 public enum ParkingType {
     HIGH,
     MEDIUM,
-    LOW
+    LOW,
+    Public,
+    Private
 }

@@ -25,19 +25,14 @@ public class Places {
     public void setId(Long id) {
         this.id = id;
     }
-    public String getName() {
-        return Name;
-    }
-    public void setName(String name) {
-        Name = name;
-    }
+    
     public Block getBlock() {
         return block;
     }
     public void setBlock(Block block) {
         this.block = block;
     }
-    private String Name;
+    private String name;
     private boolean state;
 
    @ManyToOne
@@ -46,7 +41,12 @@ public class Places {
    // @JsonIgnore
     //private Block block;
 
-   
+    public String getname() {
+        return this.name;
+    }
+    public void setname(String name) {
+       this.name = name;
+    }
     
    
   
